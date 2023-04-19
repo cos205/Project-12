@@ -1,6 +1,6 @@
-# Project 8
+# Project 12
 
-The project description is provided in the file Project 8.pdf
+The project description is provided in the file Project 12.pdf
 You can implement your assembler in either Java, or Python. 
 You will need to edit the lang.txt file with either "python3" or "java" in your ```/src``` directory.
 
