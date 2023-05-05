@@ -128,6 +128,61 @@ def software_project(temp_dir, project_num, t):
             feedback.append(test, 'test_failed', output)
 
     return feedback.get()
+    os.mkdir(os.path.join(temp_dir, 'studentOS'))
+
+def project12(temp_dir, test):
+    tests = ['Array', 'Math', 'Memory']
+    os_files = ['Array', 'Keyboard', 'Math', 'Memory', 'Output', 'Screen', 'String', 'Sys']
+    copy_upwards(temp_dir, 'jack', tests)
+    feedback = FormattedFeedback(12)
+    # Delete possible already existing vm files
+    for root, f in file_generator(temp_dir):
+        if f.lower().endswith('vm'):
+            os.remove(os.path.join(root, f))
+
+    #os.mkdir(os.path.join(temp_dir, 'OS'))
+    copy_folder(os.path.join('grader/tests', 'p12'), temp_dir, permissions='a+rwx')
+
+    os.mkdir(os.path.join(temp_dir, 'studentOS'))
+    for file in os_files:
+        output = jack_compiler(os.path.join(temp_dir, file + '.jack'))
+        if len(output) > 0:
+            feedback.append(file, 'compilation_error', output)
+        else:
+            shutil.copy(os.path.join(temp_dir, file + '.vm'), os.path.join(temp_dir, 'studentOS'))
+
+    failed = False
+    passed_all = True
+    errors = ''
+    for t in [test]:
+        t = t + 'Test'
+        copy_folder(os.path.join(temp_dir, 'OS'), os.path.join(temp_dir, test))
+        copy_folder(os.path.join(temp_dir, 'studentOS'), os.path.join(temp_dir, test), permissions='a+rwx')
+        output = vm_emulator(os.path.join(temp_dir, t), t)
+        if len(output) == 0:  # passed test
+            continue
+        # give a second chance - try to test the file separately
+        elif not os.path.exists(os.path.join(temp_dir, 'studentOS', t + '.vm')):
+            feedback.append(test, 'diff_with_test', output)
+            passed_all = False
+            continue
+        copy_folder(os.path.join(temp_dir, 'OS'), os.path.join(temp_dir, test), permissions='a+rwx')
+        shutil.copy(os.path.join(temp_dir, 'studentOS', t + '.vm'), os.path.join(temp_dir, test))
+        output2 = vm_emulator(os.path.join(temp_dir, test), test)
+        if len(output2) > 0:
+            message = 'All OS files: ' + output + 'Only {}.vm: '.format(t) + output2
+            feedback.append(test, 'diff_with_test', message)
+            passed_all = False
+        elif not failed:
+            failed = True
+            errors = output
+            where = test
+    # if all os files don't work together but only separately
+    if failed and passed_all:
+        feedback.append(where, 'diff_with_test', errors)
+
+    return feedback.get()
+
 
 # compare files ignoring whitespace
 def compare_file(file1, file2):
@@ -143,7 +198,7 @@ def grader(filename, temp_dir, test):
     os.mkdir(temp_dir)
     os.mkdir(os.path.join(temp_dir, 'src'))
     shutil.copytree(filename, os.path.join(temp_dir,'src'), symlinks=False, ignore=None, ignore_dangling_symlinks=False, dirs_exist_ok=True)
-    grade, feedback = software_project(temp_dir, 12, test)
+    grade, feedback = project12(temp_dir, test)
     #shutil.rmtree(temp_dir, ignore_errors=True)
     if feedback == '':
         feedback = 'Congratulations! all tests passed successfully!'
